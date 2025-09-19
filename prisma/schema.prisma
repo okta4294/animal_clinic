@@ -15,71 +15,7 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  name      String
-  email     String    @unique
-  password  String
-  DailyInspections DailyInspection[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  @@map("users")
-}
-
-model DailyInspection {
-  id                   String      @id @default(uuid())
-  inspection_date      DateTime
-  animal_weight        Float
-  drug_name            String
-  dosage               String
-  food_given           String
-  balance_food_take_out String
-  dopping_consistency  String
-  animal_behavior      String
-  userId               String
-  user                 User        @relation(fields: [userId], references: [id])
-
-  scientificId         String  @unique
-  scientific           Scientific @relation(fields: [scientificId], references: [id])
-
-  createdAt            DateTime   @default(now())
-  updatedAt            DateTime   @updatedAt
-
-  @@map("daily_inspections")
-}
-
-model Scientific {
-  id                   String   @id @default(uuid())
-  animal_type          String
-  common_name          String
-  cage_number          String
-  sex                  String
-  reason_for_admission String
-  date_of_entry        DateTime
-  date_of_discharge    DateTime
-
-  dailyInspection      DailyInspection?
-
-  laboratoriumId       String  @unique
-  laboratorium         Laboratorium @relation(fields: [laboratoriumId], references: [id])
-
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  @@map("scientific_names")
-}
-
-model Laboratorium {
-  id          String   @id @default(uuid())
-  test_type   String
-  diagnosis   String
-  attachment_file String
-  test_date  DateTime
-  description String
-  drug_name   String
-
-  scientific Scientific?
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  @@map("laboratorium")
+  id    Int     @id @default(autoincrement())
+  email String  @unique
+  name  String?
 }

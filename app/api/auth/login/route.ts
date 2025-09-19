@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET!; // simpan di .env
-const JWT_EXPIRES_IN = '1d'; // default 1 jam
+const JWT_EXPIRES_IN = '15m'; // default 1 jam
 
 export async function POST(req: Request) {
   const { email, password } = await req.json();
