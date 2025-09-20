@@ -126,6 +126,21 @@ export const columns: ColumnDef<DoctorRecord>[] = [
     enableHiding: false,
     cell: ({ row }) => {
       const doctor = row.original
+
+      const handleEdit = () => {
+        // di sini taruh logika edit user
+        console.log("Edit user:", doctor)
+      }
+
+      const handleDelete = () => {
+        // di sini taruh logika delete user
+        console.log("Delete user:", doctor)
+      }
+
+      const handleCopyEmail = () => {
+        navigator.clipboard.writeText(doctor.email)
+      }
+
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -136,13 +151,16 @@ export const columns: ColumnDef<DoctorRecord>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(doctor.email)}
-            >
-              Copy Email
+            <DropdownMenuItem onClick={handleEdit}>
+              Edit User
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleDelete}>
+              Delete
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>View detail</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleCopyEmail}>
+              Copy Email
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )

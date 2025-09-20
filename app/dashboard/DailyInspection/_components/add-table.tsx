@@ -156,33 +156,51 @@ export const columns: ColumnDef<AnimalRecord>[] = [
     cell: ({ row }) => <div>{row.getValue("behaviour")}</div>,
   },
   {
-    id: "actions",
-    enableHiding: false,
-    cell: ({ row }) => {
-      const animal = row.original
+  id: "actions",
+  enableHiding: false,
+  cell: ({ row }) => {
+    const animal = row.original
 
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(animal.id)}
-            >
-              Copy ID
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>View detail</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
-    },
+    const handleEdit = () => {
+      // logika edit data di sini, misalnya buka modal edit
+      console.log("Edit data:", animal)
+    }
+
+    const handleDelete = () => {
+      // logika hapus data di sini
+      console.log("Delete data:", animal)
+    }
+
+    const handleCopyId = () => {
+      navigator.clipboard.writeText(animal.id)
+    }
+
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-8 w-8 p-0">
+            <span className="sr-only">Open menu</span>
+            <MoreHorizontal />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuItem >
+            Edit Data
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleDelete}>
+            Delete
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleCopyId}>
+            Copy ID
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
   },
+}
+
 ]
 
 export function AddTable() {

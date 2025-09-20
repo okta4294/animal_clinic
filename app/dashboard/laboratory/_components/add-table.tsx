@@ -152,7 +152,22 @@ export const columns: ColumnDef<TestRecord>[] = [
     id: "actions",
     enableHiding: false,
     cell: ({ row }) => {
-      const record = row.original
+      const animal = row.original
+
+      const handleEdit = () => {
+        // logika edit data di sini, misalnya buka modal edit
+        console.log("Edit data:", animal)
+      }
+
+      const handleDelete = () => {
+        // logika hapus data di sini
+        console.log("Delete data:", animal)
+      }
+
+      const handleCopyId = () => {
+        navigator.clipboard.writeText(animal.animal_id)
+      }
+
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -163,18 +178,22 @@ export const columns: ColumnDef<TestRecord>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(record.animal_id)}
-            >
-              Copy Animal ID
+            <DropdownMenuItem onClick={handleEdit}>
+              Edit Data
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleDelete}>
+              Delete
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>View detail</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleCopyId}>
+              Copy ID
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )
     },
-  },
+  }
+
 ]
 
 export function AddTable() {
