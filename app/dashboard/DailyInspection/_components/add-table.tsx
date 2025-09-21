@@ -35,51 +35,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { EditModal } from "./edit-modal"
 
 // tipe data baru
-export type AnimalRecord = {
+export type DailyRecord = {
   id: string
-  animalName: string
-  date: string
-  weight: number
-  medicine: string
+  animal_id: string
+  inspection_date : string
+  animal_weight : number
+  drug_name: string
   dosage: string
-  foodGiven: string
-  balanceFoodtakeout: string
-  dropingsConsistency: string
-  behaviour: string
+  food_given: string
+  balance_food_take_out: string
+  dopping_consistency : string
+  animal_behavior : string
 }
 
-// contoh data
-const data: AnimalRecord[] = [
-  {
-    id: "1",
-    animalName: "Kucing Persia",
-    date: "2025-09-18",
-    weight: 3.5,
-    medicine: "Antibiotik",
-    dosage: "2x sehari",
-    foodGiven: "Whiskas",
-    balanceFoodtakeout: "Royal Canin",
-    dropingsConsistency: "Baik",
-    behaviour: "Aktif",
-  },
-  {
-    id: "2",
-    animalName: "Anjing Bulldog",
-    date: "2025-09-18",
-    weight: 12,
-    medicine: "Vitamin",
-    dosage: "1x sehari",
-    foodGiven: "Pedigree",
-    balanceFoodtakeout: "Pedigree Adult",
-    dropingsConsistency: "Kurang",
-    behaviour: "Tenang",
-  },
-]
-
 // kolom tabel baru
-export const columns: ColumnDef<AnimalRecord>[] = [
+export const columns: ColumnDef<DailyRecord>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -103,7 +78,7 @@ export const columns: ColumnDef<AnimalRecord>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "animalName",
+    accessorKey: "animal_id",
     header: ({ column }) => (
       <Button
         variant="ghost"
@@ -113,22 +88,25 @@ export const columns: ColumnDef<AnimalRecord>[] = [
         <ArrowUpDown />
       </Button>
     ),
-    cell: ({ row }) => <div>{row.getValue("animalName")}</div>,
+    cell: ({ row }) => <div>{row.getValue("animal_id")}</div>,
   },
   {
-    accessorKey: "date",
+    accessorKey: "inspection_date",
     header: "Date",
-    cell: ({ row }) => <div>{row.getValue("date")}</div>,
-  },
+    cell: ({ row }) => {
+      const val = row.getValue("inspection_date") as string | null;
+    return <div>{val ? new Date(val).toLocaleDateString() : "-"}</div>;
+      },
+    },
   {
-    accessorKey: "weight",
+    accessorKey: "animal_weight",
     header: "Weight",
-    cell: ({ row }) => <div>{row.getValue("weight")}</div>,
+    cell: ({ row }) => <div>{row.getValue("animal_weight")}</div>,
   },
   {
-    accessorKey: "medicine",
+    accessorKey: "drug_name",
     header: "Medicine",
-    cell: ({ row }) => <div>{row.getValue("medicine")}</div>,
+    cell: ({ row }) => <div>{row.getValue("drug_name")}</div>,
   },
   {
     accessorKey: "dosage",
@@ -136,46 +114,50 @@ export const columns: ColumnDef<AnimalRecord>[] = [
     cell: ({ row }) => <div>{row.getValue("dosage")}</div>,
   },
   {
-    accessorKey: "foodGiven",
+    accessorKey: "food_given",
     header: "Food Given",
-    cell: ({ row }) => <div>{row.getValue("foodGiven")}</div>,
+    cell: ({ row }) => <div>{row.getValue("food_given")}</div>,
   },
   {
-    accessorKey: "balanceFoodtakeout",
+    accessorKey: "balance_food_take_out",
     header: "Balance Food Takeout",
-    cell: ({ row }) => <div>{row.getValue("balanceFoodtakeout")}</div>,
+    cell: ({ row }) => <div>{row.getValue("balance_food_take_out")}</div>,
   },
   {
-    accessorKey: "dropingsConsistency",
+    accessorKey: "dopping_consistency",
     header: "Dropping Consistency",
-    cell: ({ row }) => <div>{row.getValue("dropingsConsistency")}</div>,
+    cell: ({ row }) => <div>{row.getValue("dopping_consistency")}</div>,
   },
   {
-    accessorKey: "behaviour",
+    accessorKey: "animal_behavior",
     header: "Behaviour",
-    cell: ({ row }) => <div>{row.getValue("behaviour")}</div>,
+    cell: ({ row }) => <div>{row.getValue("animal_behavior")}</div>,
   },
   {
   id: "actions",
   enableHiding: false,
   cell: ({ row }) => {
     const animal = row.original
+      const queryClient = useQueryClient()
+      const deleteMutation = useMutation({
 
-    const handleEdit = () => {
-      // logika edit data di sini, misalnya buka modal edit
-      console.log("Edit data:", animal)
-    }
+      mutationFn: async () => {
+      await fetch(`/api/dailyinspection/${animal.id}`, { method: "DELETE" });
+    },
 
-    const handleDelete = () => {
-      // logika hapus data di sini
-      console.log("Delete data:", animal)
-    }
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dailyinspection"] });
+    },
+  });
+
+ const [editingDaily, setEditingDaily] = React.useState<DailyRecord | null>(null)
 
     const handleCopyId = () => {
       navigator.clipboard.writeText(animal.id)
     }
 
     return (
+      <div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="h-8 w-8 p-0">
@@ -185,10 +167,10 @@ export const columns: ColumnDef<AnimalRecord>[] = [
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem >
+          <DropdownMenuItem onClick = {() => setEditingDaily(animal)}>
             Edit Data
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleDelete}>
+          <DropdownMenuItem onClick={() =>deleteMutation.mutate()}>
             Delete
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -197,6 +179,17 @@ export const columns: ColumnDef<AnimalRecord>[] = [
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      {editingDaily && (
+                      <EditModal
+                        Daily={editingDaily}
+                        isOpen={true}
+                        onOpenChange={(open) => {
+                          if (!open) setEditingDaily(null)
+                        }}
+                        onClose={() => setEditingDaily(null)}
+                      />
+                    )}
+      </div>
     )
   },
 }
@@ -210,8 +203,18 @@ export function AddTable() {
     React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
 
+  const {data: dailyInspection = [], isLoading} = useQuery({
+    queryKey: ["dailyInspection"],
+    queryFn: async () => {
+      const response = await fetch("/api/dailyinspection");
+      if (!response.ok) throw new Error('Network error');
+      const result = await response.json();
+      return result.data as DailyRecord[];
+    }
+  });
+
   const table = useReactTable({
-    data,
+    data: dailyInspection??[],
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -229,14 +232,18 @@ export function AddTable() {
     },
   })
 
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div className="w-full">
       <div className="flex items-center py-4">
         <Input
           placeholder="Filter nama hewan..."
-          value={(table.getColumn("animalName")?.getFilterValue() as string) ?? ""}
+          value={(table.getColumn("animal_id")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
-            table.getColumn("animalName")?.setFilterValue(event.target.value)
+            table.getColumn("animal_id")?.setFilterValue(event.target.value)
           }
           className="max-w-sm"
         />

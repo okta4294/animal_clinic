@@ -36,6 +36,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { EditModal } from "./edit-modal"
+
 
 // tipe data baru
 export type AnimalRecord = {
@@ -125,13 +128,25 @@ export const columns: ColumnDef<AnimalRecord>[] = [
   {
     accessorKey: "date_of_discharge",
     header: "Date of Discharge",
-    cell: ({ row }) => <div>{row.getValue("date_of_discharge")}</div>,
-  },
+    cell: ({ row }) => {const val = row.getValue("date_of_discharge") as string | null;
+    return <div>{val ? new Date(val).toLocaleDateString() : "-"}</div>;
+      }
+    },
   {
     id: "actions",
     enableHiding: false,
     cell: ({ row }) => {
       const animal = row.original
+      const queryClient = useQueryClient();
+      const deleteMutation = useMutation({
+    mutationFn: async () => {
+      await fetch(`/api/animals/${animal.id}`, { method: "DELETE" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["animals"] });
+    },
+  });
+   const [editingAnimal, setEditingAnimal] = React.useState<AnimalRecord | null>(null)
 
       const handleEdit = () => {
         // logika edit data di sini, misalnya buka modal edit
@@ -148,6 +163,7 @@ export const columns: ColumnDef<AnimalRecord>[] = [
       }
 
       return (
+        <div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -157,18 +173,29 @@ export const columns: ColumnDef<AnimalRecord>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={handleEdit}>
+            <DropdownMenuItem onClick={() => setEditingAnimal(animal)}>
               Edit Data
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleDelete}>
+            <DropdownMenuItem onClick={() => deleteMutation.mutate()}>
               Delete
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleCopyId}>
+            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(animal.animal_id)}>
               Copy ID
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        {editingAnimal && (
+        <EditModal
+          animal={editingAnimal}
+          isOpen={true}
+          onOpenChange={(open) => {
+            if (!open) setEditingAnimal(null)
+          }}
+          onClose={() => setEditingAnimal(null)}
+        />
+      )}
+    </div>
       )
     },
   }
@@ -184,12 +211,17 @@ export function AddTable() {
 const { data: animals = []} = useQuery({
     queryKey: ["animals"],
     queryFn: async () => {
-      const response = await fetch("/api/animals");
-      const result = await response.json();
-      return result.data as AnimalRecord[];
+      try {
+      const res = await fetch("/api/animals");
+      if (!res.ok) throw new Error("Failed to fetch animals");
+      const result = await res.json();
+      return result?.data ?? [];
+    } catch (err) {
+      console.error("Error fetching animals:", err);
+      return []; // fallback agar query selalu return array
+    }
     },
   });
-
 
   if (animals === undefined) {
     return <div>Loading...</div>;

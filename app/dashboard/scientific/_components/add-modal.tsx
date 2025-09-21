@@ -24,11 +24,11 @@ import { useState } from "react"
 const schema = z.object({
   animal_id:            z.string().min(1, 'Animal ID is required'),
   date_of_entry:        z.string().min(1, 'Date of Entry is required'),
-  animal_name:          z.string().min(1, 'Animal Name is required'),
+  common_name:          z.string().min(1, 'Animal Name is required'),
   animal_type:          z.string().min(1, 'Animal Type is required'),
   cage_number:          z.string().min(1, 'Cage Number is required'),
   sex:                  z.string().min(1, 'Sex is required'),
-  reason_of_admission:  z.string().min(1, 'Reason of Admission is required'),
+  reason_for_admission:  z.string().min(1, 'Reason of Admission is required'),
 })
 
 type AnimalForm = z.infer<typeof schema>
@@ -78,8 +78,7 @@ export function AddModal() {
           {/* grid 3 kolom, otomatis wrap */}
           <form
       className="space-y-4"
-      onSubmit={handleSubmit(onsubmit)}
-    >
+      onSubmit={handleSubmit(onsubmit)}>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             <div className="grid gap-2">
               <Label htmlFor="animal_id-1">Animal Id</Label>
@@ -93,8 +92,8 @@ export function AddModal() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="animal_name-1">Animal Name</Label>
-              <Input {...register("animal_name")} className="w-full" />
-            {errors.animal_name && <span className="text-sm text-red-600">{errors.animal_name.message}</span>}
+              <Input {...register("common_name")} className="w-full" />
+            {errors.common_name && <span className="text-sm text-red-600">{errors.common_name.message}</span>}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="animal_type-1">Animal Type</Label>
@@ -113,8 +112,8 @@ export function AddModal() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="reason_for_admission-1">Reason for Admission</Label>
-              <Input {...register("reason_of_admission")} className="w-full" />
-            {errors.reason_of_admission && <span className="text-sm text-red-600">{errors.reason_of_admission.message}</span>}
+              <Input {...register("reason_for_admission")} className="w-full" />
+            {errors.reason_for_admission && <span className="text-sm text-red-600">{errors.reason_for_admission.message}</span>}
             </div>
           </div>
 

@@ -28,7 +28,7 @@ model User {
 
 model DailyInspection {
   id                   String      @id @default(uuid())
-  animal_id            String      @unique
+  animal_id            String      
   inspection_date      DateTime
   animal_weight        Float
   drug_name            String
@@ -66,11 +66,11 @@ model Laboratorium {
   id          String   @id @default(uuid())
   test_type   String
   diagnosis   String
-  attachment_file String
+  attachment_file String?
   test_date  DateTime
   description String
   drug_name   String
-  animal_id  String   @unique
+  animal_id  String   
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
