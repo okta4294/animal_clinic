@@ -23,19 +23,19 @@ import { UploadButton } from "@/lib/src/utils/uploadthing"
 
 // Perbaiki schema - attachment_file harus string (URL)
 const schema = z.object({
-  animal_id:        z.string().min(1, "Animal ID is required"),
-  test_date:        z.string().min(1, "Test Date is required"),
-  test_type:        z.string().min(1, "Test Type is required"),
-  diagnosis:        z.string().min(1, "Diagnosis is required"),
-  attachment_file:  z.string().url("Valid URL required").optional().or(z.literal("")),
-  description:      z.string().min(1, "Description is required"),
-  drug_name:        z.string().min(1, "Drug Name is required"),
+  animal_id: z.string().min(1, "Animal ID is required"),
+  test_date: z.string().min(1, "Test Date is required"),
+  test_type: z.string().min(1, "Test Type is required"),
+  diagnosis: z.string().min(1, "Diagnosis is required"),
+  attachment_file: z.string().optional().nullable(),
+  description: z.string().min(1, "Description is required"),
+  drug_name: z.string().min(1, "Drug Name is required"),
 })
 
 type LabEditForm = z.infer<typeof schema>
 
 type EditModalProps = {
-  Lab: LabRecord
+  Lab: LabRecord & { file_key?: string } // Tambahkan file_key
   isOpen: boolean
   onOpenChange: (open: boolean) => void
   onClose: () => void

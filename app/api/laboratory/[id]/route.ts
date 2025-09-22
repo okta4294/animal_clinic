@@ -1,5 +1,6 @@
-import prisma from "@/lib/prisma";
-import { NextResponse } from "next/server";
+import { NextResponse } from "next/server"
+import prisma from "@/lib/prisma"
+import { deleteUploadThingFile } from "@/lib/src/utils/uploadthing"
 
 export async function PUT(
   req: Request,
@@ -35,13 +36,49 @@ export async function PUT(
   }
 }
 
-export const DELETE = async (req: Request, { params }: { params: { id: string } }) => {
+export async function DELETE(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
   try {
     const { id } = params;
-    await prisma.laboratorium.delete({ where: { id } });
-    return NextResponse.json({ message: "Deleted" });
+
+    // Dapatkan data sebelum dihapus untuk mendapatkan file URL
+    const record = await prisma.laboratorium.findUnique({
+      where: { id },
+    });
+
+    if (!record) {
+      return NextResponse.json(
+        { error: "Record not found" },
+        { status: 404 }
+      );
+    }
+
+    // Hapus file dari UploadThing jika ada
+    if (record.attachment_file && record.attachment_file.includes('utfs.io')) {
+      try {
+        await deleteUploadThingFile(record.attachment_file);
+        console.log("File deleted from UploadThing");
+      } catch (fileError) {
+        console.error("Error deleting file from UploadThing:", fileError);
+        // Lanjutkan menghapus record meskipun file gagal dihapus
+      }
+    }
+
+    // Hapus record dari database
+    await prisma.laboratorium.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({
+      message: "Data deleted successfully",
+    });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Failed to delete data" },
+      { status: 500 }
+    );
   }
-};
+}
