@@ -124,7 +124,7 @@ export function AddModal() {
             <div className="grid gap-2">
               <Label htmlFor="attachment_file">Upload PDF</Label>
               <UploadButton
-              className="w-full border rounded-md px-3 py-2 text-black"
+              className="w-full border ut-button:border-primary ut-button:bg-primary ut-button:ut-readying:bg-primary/50"
                   endpoint="pdfUploader"
                   onClientUploadComplete={(res) => {
                     setValue("attachment_file", res[0].url) // simpan URL ke form

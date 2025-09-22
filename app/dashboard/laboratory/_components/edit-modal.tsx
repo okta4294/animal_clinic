@@ -106,7 +106,7 @@ export function EditModal({ Lab, isOpen, onOpenChange, onClose }: EditModalProps
             <div className="grid gap-2">
               <Label htmlFor="attachment_file">Attachment File</Label>
               <UploadButton
-                className="w-full border rounded-md px-3 py-2"
+                className="w-full border ut-button:border-primary ut-button:bg-primary ut-button:ut-readying:bg-primary/50"
                 endpoint="pdfUploader"
                 onClientUploadComplete={(files) => {
                   const fileUrl = files[0].url;
