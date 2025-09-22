@@ -35,42 +35,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { EditModal } from "./edit-modal"
+
 
 // tipe data baru
 export type AnimalRecord = {
+  id : string
   animal_id: string
-  animal_name: string
+  common_name: string
   date_of_entry: string
   animal_type: string
   sex: string
   cage_number: string
-  reason_of_admission: string
+  reason_for_admission: string
   date_of_discharge: string
+  createdAt : string
+  updatedAt : string
 }
-
-// contoh data
-const data: AnimalRecord[] = [
-  {
-    animal_id: "A001",
-    animal_name: "Kucing Persia",
-    date_of_entry: "2025-09-18",
-    animal_type: "Kucing",
-    sex: "Betina",
-    cage_number: "C01",
-    reason_of_admission: "Perawatan rutin",
-    date_of_discharge: "2025-09-20",
-  },
-  {
-    animal_id: "A002",
-    animal_name: "Anjing Bulldog",
-    date_of_entry: "2025-09-18",
-    animal_type: "Anjing",
-    sex: "Jantan",
-    cage_number: "C02",
-    reason_of_admission: "Vaksinasi",
-    date_of_discharge: "2025-09-19",
-  },
-]
 
 // kolom tabel baru
 export const columns: ColumnDef<AnimalRecord>[] = [
@@ -102,7 +85,7 @@ export const columns: ColumnDef<AnimalRecord>[] = [
     cell: ({ row }) => <div>{row.getValue("animal_id")}</div>,
   },
   {
-    accessorKey: "animal_name",
+    accessorKey: "common_name",
     header: ({ column }) => (
       <Button
         variant="ghost"
@@ -112,12 +95,15 @@ export const columns: ColumnDef<AnimalRecord>[] = [
         <ArrowUpDown />
       </Button>
     ),
-    cell: ({ row }) => <div>{row.getValue("animal_name")}</div>,
+    cell: ({ row }) => <div>{row.getValue("common_name")}</div>,
   },
   {
     accessorKey: "date_of_entry",
     header: "Date of Entry",
-    cell: ({ row }) => <div>{row.getValue("date_of_entry")}</div>,
+    cell: ({ row }) => {
+    const val = row.getValue("date_of_entry") as string | null;
+    return <div>{val ? new Date(val).toLocaleDateString() : "-"}</div>;
+      },
   },
   {
     accessorKey: "animal_type",
@@ -135,21 +121,49 @@ export const columns: ColumnDef<AnimalRecord>[] = [
     cell: ({ row }) => <div>{row.getValue("cage_number")}</div>,
   },
   {
-    accessorKey: "reason_of_admission",
+    accessorKey: "reason_for_admission",
     header: "Reason of Admission",
-    cell: ({ row }) => <div>{row.getValue("reason_of_admission")}</div>,
+    cell: ({ row }) => <div>{row.getValue("reason_for_admission")}</div>,
   },
   {
     accessorKey: "date_of_discharge",
     header: "Date of Discharge",
-    cell: ({ row }) => <div>{row.getValue("date_of_discharge")}</div>,
-  },
+    cell: ({ row }) => {const val = row.getValue("date_of_discharge") as string | null;
+    return <div>{val ? new Date(val).toLocaleDateString() : "-"}</div>;
+      }
+    },
   {
     id: "actions",
     enableHiding: false,
     cell: ({ row }) => {
       const animal = row.original
+      const queryClient = useQueryClient();
+      const deleteMutation = useMutation({
+    mutationFn: async () => {
+      await fetch(`/api/animals/${animal.id}`, { method: "DELETE" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["animals"] });
+    },
+  });
+   const [editingAnimal, setEditingAnimal] = React.useState<AnimalRecord | null>(null)
+
+      const handleEdit = () => {
+        // logika edit data di sini, misalnya buka modal edit
+        console.log("Edit data:", animal)
+      }
+
+      const handleDelete = () => {
+        // logika hapus data di sini
+        console.log("Delete data:", animal)
+      }
+
+      const handleCopyId = () => {
+        navigator.clipboard.writeText(animal.animal_id)
+      }
+
       return (
+        <div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -159,18 +173,32 @@ export const columns: ColumnDef<AnimalRecord>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(animal.animal_id)}
-            >
-              Copy ID
+            <DropdownMenuItem onClick={() => setEditingAnimal(animal)}>
+              Edit Data
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => deleteMutation.mutate()}>
+              Delete
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>View detail</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(animal.animal_id)}>
+              Copy ID
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        {editingAnimal && (
+        <EditModal
+          animal={editingAnimal}
+          isOpen={true}
+          onOpenChange={(open) => {
+            if (!open) setEditingAnimal(null)
+          }}
+          onClose={() => setEditingAnimal(null)}
+        />
+      )}
+    </div>
       )
     },
-  },
+  }
 ]
 
 export function AddTable() {
@@ -180,8 +208,28 @@ export function AddTable() {
     React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
 
+const { data: animals = []} = useQuery({
+    queryKey: ["animals"],
+    queryFn: async () => {
+      try {
+      const res = await fetch("/api/animals");
+      if (!res.ok) throw new Error("Failed to fetch animals");
+      const result = await res.json();
+      return result?.data ?? [];
+    } catch (err) {
+      console.error("Error fetching animals:", err);
+      return []; // fallback agar query selalu return array
+    }
+    },
+  });
+
+  if (animals === undefined) {
+    return <div>Loading...</div>;
+  }
+
+
   const table = useReactTable({
-    data,
+    data:animals ?? [],
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -204,9 +252,9 @@ export function AddTable() {
       <div className="flex items-center py-4">
         <Input
           placeholder="Filter nama hewan..."
-          value={(table.getColumn("animal_name")?.getFilterValue() as string) ?? ""}
+          value={(table.getColumn("common_name")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
-            table.getColumn("animal_name")?.setFilterValue(event.target.value)
+            table.getColumn("common_name")?.setFilterValue(event.target.value)
           }
           className="max-w-sm"
         />

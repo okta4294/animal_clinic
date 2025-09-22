@@ -35,42 +35,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { EditModal } from "./edit-modal"
 
 // tipe data baru
-export type TestRecord = {
-  pdf_file: string
-  animal_id: string
-  test_type: string
-  test_date: string
-  drug_name: string
-  diagnosis: string
-  descriptions: string
+export type LabRecord = {
+  id:string
+  test_type:string
+  diagnosis:string
+  attachment_file:string | null
+  test_date:string
+  description:string
+  drug_name:string
+  animal_id:string 
 }
 
-// contoh data
-const data: TestRecord[] = [
-  {
-    pdf_file: "/files/test1.pdf",
-    animal_id: "A001",
-    test_type: "Hematology",
-    test_date: "2025-09-18",
-    drug_name: "Antibiotic",
-    diagnosis: "Infeksi ringan",
-    descriptions: "Perlu kontrol ulang dalam 1 minggu",
-  },
-  {
-    pdf_file: "/files/test2.pdf",
-    animal_id: "A002",
-    test_type: "X-ray",
-    test_date: "2025-09-19",
-    drug_name: "Painkiller",
-    diagnosis: "Fraktur ringan",
-    descriptions: "Disarankan istirahat total 2 minggu",
-  },
-]
 
 // definisi kolom tabel
-export const columns: ColumnDef<TestRecord>[] = [
+export const columns: ColumnDef<LabRecord>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -94,20 +77,21 @@ export const columns: ColumnDef<TestRecord>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "pdf_file",
-    header: "PDF File",
-    cell: ({ row }) => {
-      const file = row.getValue("pdf_file") as string
-      return (
-        <a
-          href={file}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-600 underline"
-        >
-          {file.split("/").pop()}
-        </a>
-      )
+   accessorKey: "attachment_file",
+  header: "Attachment",
+  cell: ({ row }) => {
+    const raw = row.getValue("attachment_file");
+    if (!raw) return <span className="text-muted-foreground">No file</span>;
+
+    const file = typeof raw === "string" ? raw : String(raw);
+    const last = file.lastIndexOf("/");
+    const filename = last >= 0 ? file.substring(last + 1) : file;
+
+    return (
+      <a href={file} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+        {decodeURIComponent(filename)}
+      </a>
+    );
     },
   },
   {
@@ -131,7 +115,10 @@ export const columns: ColumnDef<TestRecord>[] = [
   {
     accessorKey: "test_date",
     header: "Test Date",
-    cell: ({ row }) => <div>{row.getValue("test_date")}</div>,
+    cell: ({ row }) => {
+    const val = row.getValue("test_date") as string | null;
+    return <div>{val ? new Date(val).toLocaleDateString() : "-"}</div>;
+      },
   },
   {
     accessorKey: "drug_name",
@@ -144,16 +131,32 @@ export const columns: ColumnDef<TestRecord>[] = [
     cell: ({ row }) => <div>{row.getValue("diagnosis")}</div>,
   },
   {
-    accessorKey: "descriptions",
+    accessorKey: "description",
     header: "Descriptions",
-    cell: ({ row }) => <div>{row.getValue("descriptions")}</div>,
+    cell: ({ row }) => <div>{row.getValue("description")}</div>,
   },
   {
     id: "actions",
     enableHiding: false,
     cell: ({ row }) => {
-      const record = row.original
+      const animal = row.original
+      const queryClient = useQueryClient()
+      const deleteMutation = useMutation({
+
+      mutationFn: async () => {
+      await fetch(`/api/laboratory/${animal.id}`, { method: "DELETE" });
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["laboratory"] });
+    },
+  });
+  
+     
+      const [editingLab, setEditingLab] = React.useState<LabRecord | null>(null)
+
       return (
+        <div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -163,18 +166,33 @@ export const columns: ColumnDef<TestRecord>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(record.animal_id)}
-            >
-              Copy Animal ID
+            <DropdownMenuItem onClick={() => setEditingLab(animal)}>
+              Edit Data
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() =>deleteMutation.mutate()}>
+              Delete
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>View detail</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(animal.animal_id)}>
+              Copy ID
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        {editingLab && (
+                <EditModal
+                  Lab={editingLab}
+                  isOpen={true}
+                  onOpenChange={(open) => {
+                    if (!open) setEditingLab(null)
+                  }}
+                  onClose={() => setEditingLab(null)}
+                />
+              )}
+        </div>
       )
     },
-  },
+  }
+
 ]
 
 export function AddTable() {
@@ -186,8 +204,20 @@ export function AddTable() {
     React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
 
+  const { data: laboratorium = [], isLoading }= useQuery({
+    queryKey: ["laboratorium"],
+    queryFn: async () => {
+      const response = await fetch("/api/laboratory");
+      if (!response.ok) throw new Error('Network error');
+      const result = await response.json();
+      return result.data as LabRecord[];
+    },
+  });
+
+
+
   const table = useReactTable({
-    data,
+    data: laboratorium ?? [],
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -205,14 +235,18 @@ export function AddTable() {
     },
   })
 
+    if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div className="w-full">
       <div className="flex items-center py-4">
         <Input
-          placeholder="Filter test type..."
-          value={(table.getColumn("test_type")?.getFilterValue() as string) ?? ""}
+          placeholder="Filter animal_id..."
+          value={(table.getColumn("animal_id")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
-            table.getColumn("test_type")?.setFilterValue(event.target.value)
+            table.getColumn("animal_id")?.setFilterValue(event.target.value)
           }
           className="max-w-sm"
         />

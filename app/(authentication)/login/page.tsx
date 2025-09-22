@@ -46,6 +46,7 @@ function Page() {
       return response.json();
     },
     onSuccess: (data) => {
+      localStorage.setItem('user', JSON.stringify(data.user))
       toast.success('Login successful! Redirecting to dashboard...');
       console.log('Login successful:', data);
       setTimeout(() => {

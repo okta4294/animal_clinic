@@ -35,30 +35,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useQuery } from "@tanstack/react-query"
 
 // tipe data baru untuk dokter
-export type DoctorRecord = {
-  doctor_name: string
+export type UserRecord = {
+  name: string
   email: string
   password: string
-}
-
-// contoh data
-const data: DoctorRecord[] = [
-  {
-    doctor_name: "drh. Andi",
-    email: "andi@example.com",
-    password: "password123",
-  },
-  {
-    doctor_name: "drh. Sari",
-    email: "sari@example.com",
-    password: "rahasia456",
-  },
-]
-
+};
 // kolom tabel baru
-export const columns: ColumnDef<DoctorRecord>[] = [
+export const columns: ColumnDef<UserRecord>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -82,7 +68,7 @@ export const columns: ColumnDef<DoctorRecord>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "doctor_name",
+    accessorKey: "name",
     header: ({ column }) => (
       <Button
         variant="ghost"
@@ -92,7 +78,7 @@ export const columns: ColumnDef<DoctorRecord>[] = [
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
-    cell: ({ row }) => <div>{row.getValue("doctor_name")}</div>,
+    cell: ({ row }) => <div>{row.getValue("name")}</div>,
   },
   {
     accessorKey: "email",
@@ -126,6 +112,21 @@ export const columns: ColumnDef<DoctorRecord>[] = [
     enableHiding: false,
     cell: ({ row }) => {
       const doctor = row.original
+
+      const handleEdit = () => {
+        // di sini taruh logika edit user
+        console.log("Edit user:", doctor)
+      }
+
+      const handleDelete = () => {
+        // di sini taruh logika delete user
+        console.log("Delete user:", doctor)
+      }
+
+      const handleCopyEmail = () => {
+        navigator.clipboard.writeText(doctor.email)
+      }
+
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -136,13 +137,16 @@ export const columns: ColumnDef<DoctorRecord>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(doctor.email)}
-            >
-              Copy Email
+            <DropdownMenuItem onClick={handleEdit}>
+              Edit User
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleDelete}>
+              Delete
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>View detail</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleCopyEmail}>
+              Copy Email
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )
@@ -159,8 +163,17 @@ export function AddTable() {
     React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
 
+  const {data: users = [], isLoading} = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const res = await fetch("/api/users");
+      const result = await res.json();
+      return result.data as UserRecord[];
+    },
+  });
+  
   const table = useReactTable({
-    data,
+    data: users??[],
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -178,14 +191,18 @@ export function AddTable() {
     },
   })
 
+  if (users === undefined) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div className="w-full">
       <div className="flex items-center py-4">
         <Input
           placeholder="Filter nama dokter..."
-          value={(table.getColumn("doctor_name")?.getFilterValue() as string) ?? ""}
+          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
-            table.getColumn("doctor_name")?.setFilterValue(event.target.value)
+            table.getColumn("name")?.setFilterValue(event.target.value)
           }
           className="max-w-sm"
         />
