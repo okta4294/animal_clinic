@@ -1,9 +1,9 @@
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-export const PUT = async (req: Request, { params }: { params: { id: string } }) => {
+export const PUT = async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await req.json();
     const updated = await prisma.dailyInspection.updateMany({
       where: { animal_id: id },
@@ -26,9 +26,9 @@ export const PUT = async (req: Request, { params }: { params: { id: string } }) 
   }
 };
 
-export const DELETE = async (req: Request, { params }: { params: { id: string } }) => {
+export const DELETE = async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
   try {
-    const { id } = params;
+    const { id } = await params;
     await prisma.dailyInspection.delete({ where: { id } });
     return NextResponse.json({ message: "Deleted" });
   } catch (error) {

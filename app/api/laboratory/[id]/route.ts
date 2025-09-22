@@ -2,13 +2,10 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { deleteUploadThingFile } from "@/lib/src/utils/uploadthing"
 
-export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PUT( req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const body = await req.json();
-    const { id } = params;
+    const { id } = await params;
 
     const updatedRecord = await prisma.laboratorium.update({
       where: { id },
@@ -38,10 +35,10 @@ export async function PUT(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Dapatkan data sebelum dihapus untuk mendapatkan file URL
     const record = await prisma.laboratorium.findUnique({
