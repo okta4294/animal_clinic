@@ -38,19 +38,51 @@ import {
 import { useQuery } from "@tanstack/react-query"
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { EditModal } from "./edit-modal"
+import { toast } from "sonner"
 
 // tipe data baru
 export type LabRecord = {
-  id:string
-  test_type:string
-  diagnosis:string
-  attachment_file:string | null
-  test_date:string
-  description:string
-  drug_name:string
-  animal_id:string 
+  id: string
+  test_type: string
+  diagnosis: string
+  attachment_file: string | null
+  test_date: string
+  description: string
+  drug_name: string
+  animal_id: string 
 }
 
+// Utility function untuk menghapus file dari UploadThing
+const deleteUploadThingFile = async (fileUrl: string): Promise<boolean> => {
+  try {
+    // Ekstrak file key dari URL UploadThing
+    const url = new URL(fileUrl);
+    const pathParts = url.pathname.split('/');
+    const fileKey = pathParts[pathParts.length - 1];
+    
+    if (!fileKey) {
+      throw new Error("Invalid file URL - cannot extract file key");
+    }
+
+    const response = await fetch('/api/delete-file', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ fileKey }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to delete file from UploadThing');
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error deleting file from UploadThing:', error);
+    throw error;
+  }
+};
 
 // definisi kolom tabel
 export const columns: ColumnDef<LabRecord>[] = [
@@ -77,27 +109,32 @@ export const columns: ColumnDef<LabRecord>[] = [
     enableHiding: false,
   },
   {
-   accessorKey: "attachment_file",
-  header: "Attachment",
-  cell: ({ row }) => {
-    const raw = row.getValue("attachment_file");
-    if (!raw) return <span className="text-muted-foreground">No file</span>;
+    accessorKey: "attachment_file",
+    header: "Attachment",
+    cell: ({ row }) => {
+      const raw = row.getValue("attachment_file");
+      if (!raw) return <span className="text-muted-foreground">No file</span>;
 
-    const file = typeof raw === "string" ? raw : String(raw);
-    const last = file.lastIndexOf("/");
-    const filename = last >= 0 ? file.substring(last + 1) : file;
+      const file = typeof raw === "string" ? raw : String(raw);
+      const last = file.lastIndexOf("/");
+      const filename = last >= 0 ? file.substring(last + 1) : file;
 
-    return (
-      <a href={file} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
-        {decodeURIComponent(filename)}
-      </a>
-    );
+      return (
+        <a 
+          href={file} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="text-blue-600 underline hover:text-blue-800"
+        >
+          {decodeURIComponent(filename)}
+        </a>
+      );
     },
   },
   {
     accessorKey: "animal_id",
     header: "Animal ID",
-    cell: ({ row }) => <div>{row.getValue("animal_id")}</div>,
+    cell: ({ row }) => <div className="font-medium">{row.getValue("animal_id")}</div>,
   },
   {
     accessorKey: "test_type",
@@ -107,7 +144,7 @@ export const columns: ColumnDef<LabRecord>[] = [
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Test Type
-        <ArrowUpDown />
+        <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
     cell: ({ row }) => <div>{row.getValue("test_type")}</div>,
@@ -116,9 +153,9 @@ export const columns: ColumnDef<LabRecord>[] = [
     accessorKey: "test_date",
     header: "Test Date",
     cell: ({ row }) => {
-    const val = row.getValue("test_date") as string | null;
-    return <div>{val ? new Date(val).toLocaleDateString() : "-"}</div>;
-      },
+      const val = row.getValue("test_date") as string | null;
+      return <div>{val ? new Date(val).toLocaleDateString('id-ID') : "-"}</div>;
+    },
   },
   {
     accessorKey: "drug_name",
@@ -133,79 +170,122 @@ export const columns: ColumnDef<LabRecord>[] = [
   {
     accessorKey: "description",
     header: "Descriptions",
-    cell: ({ row }) => <div>{row.getValue("description")}</div>,
+    cell: ({ row }) => (
+      <div className="max-w-[200px] truncate" title={row.getValue("description")}>
+        {row.getValue("description")}
+      </div>
+    ),
   },
   {
     id: "actions",
     enableHiding: false,
     cell: ({ row }) => {
-      const animal = row.original
-      const queryClient = useQueryClient()
+      const animal = row.original;
+      const queryClient = useQueryClient();
+      const [editingLab, setEditingLab] = React.useState<LabRecord | null>(null);
+
       const deleteMutation = useMutation({
+        mutationFn: async () => {
+          // Konfirmasi sebelum menghapus
+          const confirmed = window.confirm(
+            "Are you sure you want to delete this record and its associated file?"
+          );
+          
+          if (!confirmed) {
+            throw new Error("Deletion cancelled");
+          }
+          
+          try {
+            // Hapus file dari UploadThing jika ada dan berasal dari UploadThing
+            if (animal.attachment_file && animal.attachment_file.includes('utfs.io')) {
+              await deleteUploadThingFile(animal.attachment_file);
+            }
+            
+            // Hapus data dari database
+            const response = await fetch(`/api/laboratory/${animal.id}`, { 
+              method: "DELETE" 
+            });
+            
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || "Failed to delete record from database");
+            }
+          } catch (error) {
+            console.error("Error during deletion:", error);
+            throw error;
+          }
+        },
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["laboratory"] });
+          toast.success("Data and file deleted successfully!");
+        },
+        onError: (error: Error) => {
+          toast.error(error.message || "Failed to delete data");
+        },
+      });
 
-      mutationFn: async () => {
-      await fetch(`/api/laboratory/${animal.id}`, { method: "DELETE" });
-    },
-
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["laboratory"] });
-    },
-  });
-  
-     
-      const [editingLab, setEditingLab] = React.useState<LabRecord | null>(null)
+      const handleDelete = () => {
+        deleteMutation.mutate();
+      };
 
       return (
         <div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => setEditingLab(animal)}>
-              Edit Data
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() =>deleteMutation.mutate()}>
-              Delete
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(animal.animal_id)}>
-              Copy ID
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        {editingLab && (
-                <EditModal
-                  Lab={editingLab}
-                  isOpen={true}
-                  onOpenChange={(open) => {
-                    if (!open) setEditingLab(null)
-                  }}
-                  onClose={() => setEditingLab(null)}
-                />
-              )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem 
+                onClick={() => setEditingLab(animal)}
+                className="cursor-pointer"
+              >
+                Edit Data
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={handleDelete}
+                className="cursor-pointer text-red-600 focus:text-red-600"
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={() => navigator.clipboard.writeText(animal.animal_id)}
+                className="cursor-pointer"
+              >
+                Copy Animal ID
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          {editingLab && (
+            <EditModal
+              Lab={editingLab}
+              isOpen={true}
+              onOpenChange={(open) => {
+                if (!open) setEditingLab(null);
+              }}
+              onClose={() => setEditingLab(null)}
+            />
+          )}
         </div>
-      )
+      );
     },
-  }
-
-]
+  },
+];
 
 export function AddTable() {
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  )
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = React.useState({})
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = React.useState({});
 
-  const { data: laboratorium = [], isLoading }= useQuery({
-    queryKey: ["laboratorium"],
+  const { data: laboratorium = [], isLoading, error } = useQuery({
+    queryKey: ["laboratory"], // Diperbaiki dari "laboratorium" menjadi "laboratory"
     queryFn: async () => {
       const response = await fetch("/api/laboratory");
       if (!response.ok) throw new Error('Network error');
@@ -214,10 +294,8 @@ export function AddTable() {
     },
   });
 
-
-
   const table = useReactTable({
-    data: laboratorium ?? [],
+    data: laboratorium,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -233,10 +311,22 @@ export function AddTable() {
       columnVisibility,
       rowSelection,
     },
-  })
+  });
 
-    if (isLoading) {
-    return <div>Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg text-red-600">Error loading data</div>
+      </div>
+    );
   }
 
   return (
@@ -253,7 +343,7 @@ export function AddTable() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">
-              Columns <ChevronDown />
+              Columns <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -272,11 +362,12 @@ export function AddTable() {
                   >
                     {column.id}
                   </DropdownMenuCheckboxItem>
-                )
+                );
               })}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      
       <div className="overflow-hidden rounded-md border">
         <Table>
           <TableHeader>
@@ -292,7 +383,7 @@ export function AddTable() {
                             header.getContext()
                           )}
                     </TableHead>
-                  )
+                  );
                 })}
               </TableRow>
             ))}
@@ -320,13 +411,14 @@ export function AddTable() {
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  No results found.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
+      
       <div className="flex items-center justify-end space-x-2 py-4">
         <div className="text-muted-foreground flex-1 text-sm">
           {table.getFilteredSelectedRowModel().rows.length} of{" "}
@@ -352,5 +444,5 @@ export function AddTable() {
         </div>
       </div>
     </div>
-  )
+  );
 }
