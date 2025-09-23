@@ -74,7 +74,7 @@ export const columns: ColumnDef<UserRecord>[] = [
         variant="ghost"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        Nama Dokter
+        User
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
@@ -137,12 +137,6 @@ export const columns: ColumnDef<UserRecord>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={handleEdit}>
-              Edit User
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleDelete}>
-              Delete
-            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleCopyEmail}>
               Copy Email
@@ -199,7 +193,7 @@ export function AddTable() {
     <div className="w-full">
       <div className="flex items-center py-4">
         <Input
-          placeholder="Filter nama dokter..."
+          placeholder="Filter User..."
           value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
             table.getColumn("name")?.setFilterValue(event.target.value)

@@ -38,6 +38,7 @@ import {
 import { useQuery } from "@tanstack/react-query"
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { EditModal } from "./edit-modal"
+import { toast } from "sonner"
 
 
 // tipe data baru
@@ -91,7 +92,7 @@ export const columns: ColumnDef<AnimalRecord>[] = [
         variant="ghost"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        Nama Hewan
+        Animal Name
         <ArrowUpDown />
       </Button>
     ),
@@ -144,7 +145,9 @@ export const columns: ColumnDef<AnimalRecord>[] = [
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["animals"] });
+      toast.success("Data  deleted successfully!");
     },
+    
   });
    const [editingAnimal, setEditingAnimal] = React.useState<AnimalRecord | null>(null)
 
@@ -176,7 +179,8 @@ export const columns: ColumnDef<AnimalRecord>[] = [
             <DropdownMenuItem onClick={() => setEditingAnimal(animal)}>
               Edit Data
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => deleteMutation.mutate()}>
+            <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600"
+            onClick={() => deleteMutation.mutate()}>
               Delete
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -251,7 +255,7 @@ const { data: animals = []} = useQuery({
     <div className="w-full">
       <div className="flex items-center py-4">
         <Input
-          placeholder="Filter nama hewan..."
+          placeholder="Filter Animal Name..."
           value={(table.getColumn("common_name")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
             table.getColumn("common_name")?.setFilterValue(event.target.value)

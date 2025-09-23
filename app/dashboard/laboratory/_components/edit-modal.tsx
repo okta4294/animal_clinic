@@ -96,7 +96,7 @@ export function EditModal({ Lab, isOpen, onOpenChange, onClose }: EditModalProps
         <DialogHeader>
           <DialogTitle>Edit Data</DialogTitle>
           <DialogDescription>
-            Update the animal inspection data. Click save when done.
+            Update the animal inspection data. Click save when done (If you want to replace a file, first delete the data you want to change.).
           </DialogDescription>
         </DialogHeader>
 
@@ -117,6 +117,7 @@ export function EditModal({ Lab, isOpen, onOpenChange, onClose }: EditModalProps
                 onUploadError={(error) => {
                   toast.error(`Upload failed: ${error.message}`);
                 }}
+                disabled
               />
               {currentFileUrl && (
                 <div className="mt-2 text-sm text-green-600">
