@@ -38,6 +38,7 @@ import {
 import { useQuery } from "@tanstack/react-query"
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { EditModal } from "./edit-modal"
+import { toast } from "sonner"
 
 // tipe data baru
 export type DailyRecord = {
@@ -84,7 +85,7 @@ export const columns: ColumnDef<DailyRecord>[] = [
         variant="ghost"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        Nama Hewan
+        Animal Name
         <ArrowUpDown />
       </Button>
     ),
@@ -147,6 +148,7 @@ export const columns: ColumnDef<DailyRecord>[] = [
 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dailyinspection"] });
+      toast.success("Data  deleted successfully!");
     },
   });
 
@@ -170,7 +172,8 @@ export const columns: ColumnDef<DailyRecord>[] = [
           <DropdownMenuItem onClick = {() => setEditingDaily(animal)}>
             Edit Data
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() =>deleteMutation.mutate()}>
+          <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600"
+          onClick={() =>deleteMutation.mutate()}>
             Delete
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -240,7 +243,7 @@ export function AddTable() {
     <div className="w-full">
       <div className="flex items-center py-4">
         <Input
-          placeholder="Filter nama hewan..."
+          placeholder="Filter Animal Name..."
           value={(table.getColumn("animal_id")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
             table.getColumn("animal_id")?.setFilterValue(event.target.value)
